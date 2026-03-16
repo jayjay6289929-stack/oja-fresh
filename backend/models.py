@@ -1,12 +1,23 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Integer, Text, ForeignKey, DateTime, JSON
+from sqlalchemy import Column, String, Float, Integer, Text, ForeignKey, DateTime, JSON, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 
 
 def generate_uuid() -> str:
     return str(uuid.uuid4())
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id         = Column(String, primary_key=True, default=generate_uuid)
+    email      = Column(String, nullable=False, unique=True)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    orders = relationship("Order", back_populates="user")
 
 
 class Product(Base):
@@ -20,7 +31,7 @@ class Product(Base):
     image       = Column(String, nullable=True)
     rating      = Column(Float, default=0.0)
     reviews     = Column(Integer, default=0)
-    tags        = Column(JSON, default=list)  # stored as a proper JSON array
+    tags        = Column(JSON, default=list)
 
 
 class Order(Base):
@@ -34,6 +45,10 @@ class Order(Base):
     total_price   = Column(Float, nullable=False)
     status        = Column(String, default="pending")
     created_at    = Column(DateTime, default=datetime.utcnow)
+
+    # Nullable so existing guest orders are not broken
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    user    = relationship("User", back_populates="orders")
 
     items = relationship("OrderItem", back_populates="order", lazy="joined")
 

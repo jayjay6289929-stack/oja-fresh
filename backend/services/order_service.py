@@ -5,8 +5,7 @@ from schemas.order import OrderIn
 from services.product_service import get_product_by_id
 
 
-def create_order(db: Session, order_in: OrderIn) -> Order:
-    # validate all products exist and compute total before any DB writes
+def create_order(db: Session, order_in: OrderIn, user_id: str | None = None) -> Order:
     line_items = []
     total = 0.0
 
@@ -26,9 +25,10 @@ def create_order(db: Session, order_in: OrderIn) -> Order:
         address=order_in.address,
         city=order_in.city,
         total_price=round(total, 2),
+        user_id=user_id,
     )
     db.add(order)
-    db.flush()  # get the order id without committing yet
+    db.flush()
 
     for line in line_items:
         db.add(OrderItem(order_id=order.id, **line))
@@ -43,3 +43,12 @@ def get_order_by_id(db: Session, order_id: str) -> Order:
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+
+def get_orders_by_user(db: Session, user_id: str) -> list[Order]:
+    return (
+        db.query(Order)
+        .filter(Order.user_id == user_id)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
